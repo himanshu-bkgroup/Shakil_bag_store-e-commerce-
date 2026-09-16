@@ -1,0 +1,44 @@
+services:
+  # 1. Primary Node.js Full-Stack Application (Express REST API + React SPA + WhatsApp Scheduler)
+  - type: web
+    name: shakil-bag-store
+    env: node
+    plan: starter
+    region: singapore
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: shakil_bag_store
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_WEBHOOK_VERIFY_TOKEN
+        generateValue: true
+
+  # 2. Optional Standalone FastAPI Python Backend Service
+  - type: web
+    name: shakil-fastapi-backend
+    env: python
+    plan: starter
+    region: singapore
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        value: shakil_bag_store
+      - key: CORS_ORIGINS
+        value: "*"

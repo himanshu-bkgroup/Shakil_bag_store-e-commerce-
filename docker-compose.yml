@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: shakil_bag_store_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGO_URL=mongodb://mongo:27017/shakil_bag_store
+      - DB_NAME=shakil_bag_store
+      - JWT_SECRET=shakil_secret_key_production_2026
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID}
+    depends_on:
+      - mongo
+    volumes:
+      - ./data:/app/data
+
+  mongo:
+    image: mongo:6.0
+    container_name: shakil_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

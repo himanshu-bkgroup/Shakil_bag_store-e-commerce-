@@ -1,0 +1,6 @@
+{
+  "name": "SHAKIL BAG STORE - Luxury Bags & Luggage",
+  "description": "Full-stack e-commerce application for Shakil Bag Store featuring premium luggage, travel gear, AI shopping assistant, automated WhatsApp recovery, and MongoDB persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
