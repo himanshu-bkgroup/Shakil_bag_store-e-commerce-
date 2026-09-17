@@ -3,6 +3,7 @@ import { Shield, Sparkles, Truck, Check, ArrowRight, ChevronDown, Star, PhoneCal
 import { ProductCard } from '../components/ProductCard';
 import { Product, Category } from '../types';
 import { useStore } from '../context/StoreContext';
+import { INITIAL_PRODUCTS } from '../data/initialData';
 
 interface HomePageProps {
   onNavigate: (page: string, param?: string) => void;
@@ -10,16 +11,23 @@ interface HomePageProps {
 
 export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   const { setOpenChat, categories } = useStore();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
 
   useEffect(() => {
     fetch('/api/products')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.products) setProducts(data.products);
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        return res.json();
       })
-      .catch((err) => console.error(err));
+      .then((data) => {
+        if (data.products && Array.isArray(data.products) && data.products.length > 0) {
+          setProducts(data.products);
+        }
+      })
+      .catch((err) => {
+        console.warn('Backend /api/products response not available, using catalogue cache:', err);
+      });
   }, []);
 
   const bestSellers = products.filter((p) => p.isBestSeller).slice(0, 4);

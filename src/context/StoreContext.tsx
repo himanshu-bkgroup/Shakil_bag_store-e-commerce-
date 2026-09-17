@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Product, Category, User, CartItem, Order, AdminSettings } from '../types';
+import { INITIAL_CATEGORIES } from '../data/initialData';
 
 interface StoreContextType {
   user: User | null;
@@ -59,7 +60,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return raw ? JSON.parse(raw) : [];
   });
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [settings, setSettings] = useState<AdminSettings>({
     storeName: 'SHAKIL BAG STORE',
     ownerName: 'Mohammad Shakil',

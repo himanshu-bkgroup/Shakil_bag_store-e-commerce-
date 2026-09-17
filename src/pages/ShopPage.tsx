@@ -3,6 +3,7 @@ import { Filter, SlidersHorizontal, X, Search, ChevronDown, Check } from 'lucide
 import { ProductCard } from '../components/ProductCard';
 import { Product, Category } from '../types';
 import { useStore } from '../context/StoreContext';
+import { INITIAL_PRODUCTS } from '../data/initialData';
 
 interface ShopPageProps {
   onNavigate: (page: string, param?: string) => void;
@@ -11,8 +12,8 @@ interface ShopPageProps {
 
 export const ShopPage: React.FC<ShopPageProps> = ({ onNavigate, initialParams = '' }) => {
   const { categories } = useStore();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [loading, setLoading] = useState(false);
 
   // Filters
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -64,7 +65,15 @@ export const ShopPage: React.FC<ShopPageProps> = ({ onNavigate, initialParams = 
         setProducts(list);
       }
     } catch (err) {
-      console.error('Failed to load products', err);
+      console.warn('Notice: Backend fetch failed, showing available collection:', err);
+      let list = [...INITIAL_PRODUCTS];
+      if (selectedCategory && selectedCategory !== 'all') {
+        list = list.filter((p) => p.category.toLowerCase().replace(/[^a-z0-9]+/g, '-') === selectedCategory.toLowerCase() || p.category.toLowerCase() === selectedCategory.toLowerCase());
+      }
+      if (inStockOnly) {
+        list = list.filter((p) => p.stockQuantity > 0);
+      }
+      setProducts(list);
     } finally {
       setLoading(false);
     }

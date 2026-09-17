@@ -39,17 +39,22 @@ export function createExpressApp() {
   });
 
   // Health check endpoint
-  app.get('/api/health', (_req, res) => {
+  const healthHandler = (_req: express.Request, res: express.Response) => {
     res.json({
       status: 'ok',
       store: 'SHAKIL BAG STORE',
       owner: 'Mohammad Shakil',
       time: new Date().toISOString()
     });
-  });
+  };
 
-  // Mount primary REST API routes
+  app.get('/health', healthHandler);
+  app.get('/api/health', healthHandler);
+
+  // Mount primary REST API routes on both /api and root
+  // This ensures requests work whether Netlify preserves or strips the /api prefix
   app.use('/api', apiRouter);
+  app.use('/', apiRouter);
 
   return app;
 }

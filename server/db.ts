@@ -5,8 +5,28 @@ import bcrypt from 'bcryptjs';
 import { INITIAL_CATEGORIES, INITIAL_PRODUCTS, INITIAL_SETTINGS } from './initialData';
 import { Product, Category, User, Order, Cart, AbandonedCart, Lead, Enquiry, Review, Coupon, AdminSettings, ExitSurvey } from '../src/types';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
+function getDataPaths() {
+  const isServerless = Boolean(
+    process.env.NETLIFY ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.LAMBDA_TASK_ROOT
+  );
+
+  if (isServerless) {
+    return {
+      dir: '/tmp',
+      file: path.join('/tmp', 'shakil_db.json')
+    };
+  }
+
+  const localDir = path.join(process.cwd(), 'data');
+  return {
+    dir: localDir,
+    file: path.join(localDir, 'db.json')
+  };
+}
+
+const { dir: DATA_DIR, file: DB_FILE } = getDataPaths();
 
 export interface DBState {
   users: User[];
@@ -121,19 +141,6 @@ const initialReviews: Review[] = [
 ];
 
 function loadLocalDB(): DBState {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (fs.existsSync(DB_FILE)) {
-    try {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
-      return JSON.parse(raw);
-    } catch (e) {
-      console.error('Error reading db.json, re-initializing...', e);
-    }
-  }
-
   const initialState: DBState = {
     users: [initialAdmin],
     products: INITIAL_PRODUCTS,
@@ -160,7 +167,31 @@ function loadLocalDB(): DBState {
     ]
   };
 
-  fs.writeFileSync(DB_FILE, JSON.stringify(initialState, null, 2), 'utf-8');
+  try {
+    const projectDbFile = path.join(process.cwd(), 'data', 'db.json');
+    const candidateFile = fs.existsSync(DB_FILE) ? DB_FILE : (fs.existsSync(projectDbFile) ? projectDbFile : null);
+
+    if (candidateFile) {
+      const raw = fs.readFileSync(candidateFile, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.products) && parsed.products.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    console.warn('Notice: Could not read db.json from filesystem, using initial products state:', e);
+  }
+
+  // Attempt to write initial state if directory is writable (catch and ignore if read-only)
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(initialState, null, 2), 'utf-8');
+  } catch (e) {
+    // Read-only filesystem is completely safe - in-memory initialState is used
+  }
+
   return initialState;
 }
 
@@ -168,9 +199,12 @@ let localDB: DBState = loadLocalDB();
 
 function saveLocalDB() {
   try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
     fs.writeFileSync(DB_FILE, JSON.stringify(localDB, null, 2), 'utf-8');
   } catch (e) {
-    console.error('Failed to write db.json:', e);
+    // Ignore write errors in read-only serverless environments
   }
 }
 

@@ -3,6 +3,7 @@ import { Shield, Star, Truck, RotateCcw, Heart, ShoppingBag, PhoneCall, Check, M
 import { Product, Review } from '../types';
 import { useStore } from '../context/StoreContext';
 import { ProductCard } from '../components/ProductCard';
+import { INITIAL_PRODUCTS } from '../data/initialData';
 
 interface ProductDetailPageProps {
   slug: string;
@@ -41,7 +42,16 @@ export const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ slug, onNa
           setRelated(data.related || []);
         }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.warn('Backend fetch failed, attempting local fallback:', err);
+        const fallback = INITIAL_PRODUCTS.find((p) => p.slug === slug || p._id === slug);
+        if (fallback) {
+          setProduct(fallback);
+          setSelectedImage(fallback.thumbnail || fallback.images[0]);
+          setSelectedColor(fallback.color[0] || 'Standard');
+          setRelated(INITIAL_PRODUCTS.filter((p) => p._id !== fallback._id && p.category === fallback.category).slice(0, 4));
+        }
+      })
       .finally(() => setLoading(false));
 
     // Fetch reviews
