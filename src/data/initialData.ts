@@ -304,6 +304,8 @@ export const INITIAL_PRODUCTS: Product[] = [
       'Bearing Type': 'Sealed Stainless Steel ABEC-7',
       'Load Capacity': '40 kg per wheel (160 kg for 4 wheels)'
     },
+    dimensions: { length: 8, width: 8, height: 6, unit: 'cm' },
+    weight: { value: 0.25, unit: 'kg' },
     tags: ['wheels', 'replacement', 'repair', 'accessories', 'spare parts'],
     status: 'ACTIVE',
     rating: 4.9,
@@ -318,17 +320,21 @@ export const INITIAL_PRODUCTS: Product[] = [
 
 export const INITIAL_SETTINGS: AdminSettings = {
   storeName: 'SHAKIL BAG STORE',
-  storeTagline: 'Luxury Luggage, Travel Gear & Atelier Repairs',
   ownerName: 'Mohammad Shakil',
-  officialPhone: '+91 7217876220',
-  officialEmail: 'shakilbagstore@gmail.com',
-  officialAddress: 'Mohammad Shakil Luggage Atelier, Main Market, Rampur, Uttar Pradesh 244901, India',
+  phone: '+91 7217876220',
+  whatsappNumber: '+917217876220',
+  email: 'shakilbagstore@gmail.com',
   currency: 'INR',
   currencySymbol: '₹',
+  abandonedCartEnabled: true,
+  stagesEnabled: {
+    stage_60m: true,
+    stage_3h: true,
+    stage_6h: true,
+    stage_12h: true,
+    stage_24h: true
+  },
+  aiEnabled: true,
   freeShippingThreshold: 999,
-  standardShippingFee: 99,
-  enableWhatsAppNotifications: true,
-  whatsappNumber: '+917217876220',
-  autoRecoveryEnabled: true,
-  aiAssistantEnabled: true
+  standardShippingFee: 99
 };

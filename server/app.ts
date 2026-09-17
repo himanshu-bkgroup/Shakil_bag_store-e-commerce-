@@ -51,8 +51,9 @@ export function createExpressApp() {
   app.get('/health', healthHandler);
   app.get('/api/health', healthHandler);
 
-  // Mount primary REST API routes on both /api and root
+  // Mount primary REST API routes on all possible Netlify function paths
   // This ensures requests work whether Netlify preserves or strips the /api prefix
+  app.use('/.netlify/functions/api', apiRouter);
   app.use('/api', apiRouter);
   app.use('/', apiRouter);
 
