@@ -224,7 +224,8 @@ export interface Lead {
   productId?: string;
   requirement?: string;
   budget?: string;
-  source: 'CHATBOT' | 'PRODUCT_PAGE' | 'BULK_ENQUIRY' | 'WHATSAPP' | 'CONTACT_FORM';
+  categoryType?: string;
+  source: 'CHATBOT' | 'PRODUCT_PAGE' | 'BULK_ENQUIRY' | 'WHATSAPP' | 'CONTACT_FORM' | 'PERSONAL_SHOPPING' | 'NEWSLETTER' | string;
   status: 'NEW' | 'QUALIFIED' | 'CONTACTED' | 'CONVERTED' | 'LOST';
   notes?: string;
   createdAt: string;

@@ -853,25 +853,43 @@ router.post('/reviews', async (req, res) => {
 // ----------------------------------------------------
 router.post('/leads', async (req, res) => {
   try {
-    const { name, phone, email, productName, productId, requirement, budget, source } = req.body;
-    if (!name || !phone) return res.status(400).json({ error: 'Name and phone are required.' });
+    const { name, phone, email, productName, productId, requirement, budget, source, categoryType } = req.body;
+    
+    // Either phone or email is required
+    const cleanPhone = phone && phone !== 'Not provided' ? String(phone).trim() : '';
+    const cleanEmail = email ? String(email).trim() : '';
+    const cleanName = name ? String(name).trim() : (cleanEmail || 'Guest');
+
+    if (!cleanPhone && !cleanEmail) {
+      return res.status(400).json({ error: 'Please provide either a phone number or email address.' });
+    }
 
     const newLead: Lead = {
       _id: 'lead_' + Date.now(),
-      name,
-      phone,
-      email,
+      name: cleanName,
+      phone: cleanPhone,
+      email: cleanEmail,
       productName,
       productId,
-      requirement,
-      budget,
-      source: source || 'PRODUCT_PAGE',
+      requirement: requirement || (categoryType ? `[${categoryType}] Inquiry` : 'General luxury inquiry'),
+      budget: budget ? String(budget).trim() : undefined,
+      categoryType: categoryType || (source === 'PERSONAL_SHOPPING' ? 'Right bag for me' : undefined),
+      source: source || 'CONTACT_FORM',
       status: 'NEW',
       createdAt: new Date().toISOString()
     };
 
     await db.saveLead(newLead);
-    await db.addNotification('New Buying Lead', `${name} (+${phone}) inquired regarding ${productName || 'luggage'}`, 'LEAD', '/admin/leads');
+    
+    let notifTitle = 'New Buying Lead';
+    if (source === 'PERSONAL_SHOPPING') {
+      notifTitle = 'New Personal Shopping / Query';
+    } else if (source === 'NEWSLETTER') {
+      notifTitle = 'New Newsletter Subscriber';
+    }
+    
+    const contactSummary = [cleanPhone, cleanEmail].filter(Boolean).join(' • ');
+    await db.addNotification(notifTitle, `${cleanName} (${contactSummary}) - ${newLead.requirement}`, 'LEAD', '/admin/leads');
     res.status(201).json({ lead: newLead });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -1140,6 +1158,16 @@ router.put('/admin/settings', verifyAdmin, async (req, res) => {
 router.get('/admin/leads', verifyAdmin, async (_req, res) => {
   const leads = await db.getLeads();
   res.json({ leads });
+});
+
+router.delete('/admin/leads/:id', verifyAdmin, async (req, res) => {
+  await db.deleteLead(req.params.id);
+  res.json({ success: true, message: 'Lead removed successfully' });
+});
+
+router.put('/admin/leads/:id/status', verifyAdmin, async (req, res) => {
+  const updated = await db.updateLead(req.params.id, { status: req.body.status });
+  res.json({ lead: updated });
 });
 
 router.get('/admin/enquiries', verifyAdmin, async (_req, res) => {

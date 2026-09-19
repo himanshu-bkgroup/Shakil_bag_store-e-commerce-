@@ -22,7 +22,11 @@ import {
   Loader2,
   X,
   AlertCircle,
-  Sparkles
+  Sparkles,
+  Mail,
+  MessageSquare,
+  Filter,
+  ExternalLink
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Product, Order, AbandonedCart, Lead, ExitSurvey, AdminSettings } from '../types';
@@ -36,8 +40,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
   const { user, token, formatPrice, settings: globalSettings, login } = useStore();
 
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'products' | 'inventory' | 'orders' | 'abandoned' | 'import' | 'analytics' | 'leads' | 'settings'
+    'overview' | 'products' | 'inventory' | 'orders' | 'abandoned' | 'import' | 'analytics' | 'leads' | 'personal_shopping' | 'settings'
   >('overview');
+
+  // Leads and Personal Shopping filters
+  const [leadCategoryFilter, setLeadCategoryFilter] = useState<'BUYER_LEADS' | 'ALL' | 'NEWSLETTER'>('BUYER_LEADS');
+  const [personalShoppingSubfilter, setPersonalShoppingSubfilter] = useState<'ALL' | 'BAG' | 'WHEELS'>('ALL');
 
   // Stats
   const [stats, setStats] = useState<any>(null);
@@ -364,6 +372,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
     }
   };
 
+  const handleDeleteLead = async (leadId: string) => {
+    if (!window.confirm('Are you sure you want to remove this record?')) return;
+    try {
+      const res = await fetch(`/api/admin/leads/${leadId}`, {
+        method: 'DELETE',
+        headers: authHeaders
+      });
+      if (res.ok) {
+        setLeads((prev) => prev.filter((l) => l._id !== leadId));
+        setActionSuccess('Record removed successfully.');
+        setTimeout(() => setActionSuccess(''), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to delete lead:', err);
+    }
+  };
+
   const handleBulkImport = async () => {
     if (!csvText.trim()) return;
     setImporting(true);
@@ -396,6 +421,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
       console.error(err);
     }
   };
+
+  const isNewsletterLead = (l: Lead) =>
+    l.source === 'NEWSLETTER' ||
+    l.name?.toLowerCase().includes('newsletter') ||
+    l.requirement?.toLowerCase().includes('travel drops') ||
+    l.requirement?.toLowerCase().includes('newsletter');
+
+  const isPersonalShoppingLead = (l: Lead) =>
+    l.source === 'PERSONAL_SHOPPING' ||
+    Boolean(l.categoryType) ||
+    Boolean(l.requirement?.includes('[Right bag for me]')) ||
+    Boolean(l.requirement?.includes('[Trolley wheels]')) ||
+    Boolean(l.productName?.toLowerCase().includes('consultation'));
+
+  const personalShoppingLeads = leads.filter(isPersonalShoppingLead);
+  const newsletterLeads = leads.filter(isNewsletterLead);
+  const pureBuyerLeads = leads.filter((l) => !isNewsletterLead(l) && !isPersonalShoppingLead(l));
+
+  // Displayed buyer leads based on leadCategoryFilter
+  const displayedBuyerLeads =
+    leadCategoryFilter === 'BUYER_LEADS'
+      ? pureBuyerLeads
+      : leadCategoryFilter === 'NEWSLETTER'
+      ? newsletterLeads
+      : leads;
+
+  // Filtered personal shopping leads based on category subfilter
+  const displayedPersonalShopping =
+    personalShoppingSubfilter === 'BAG'
+      ? personalShoppingLeads.filter(
+          (l) => l.categoryType === 'Right bag for me' || l.requirement?.includes('Right bag')
+        )
+      : personalShoppingSubfilter === 'WHEELS'
+      ? personalShoppingLeads.filter(
+          (l) => l.categoryType === 'Trolley wheels' || l.requirement?.includes('Trolley wheels')
+        )
+      : personalShoppingLeads;
 
   return (
     <div className="bg-stone-950 text-stone-100 min-h-screen flex flex-col lg:flex-row">
@@ -484,13 +546,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
             </button>
 
             <button
+              id="admin-tab-personal-shopping"
+              onClick={() => setActiveTab('personal_shopping')}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
+                activeTab === 'personal_shopping'
+                  ? 'bg-amber-500 text-stone-950 font-bold'
+                  : 'text-stone-300 hover:bg-stone-800'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Personal Shopping / Query</span>
+              </div>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                  activeTab === 'personal_shopping'
+                    ? 'bg-stone-950 text-amber-400'
+                    : 'bg-stone-800 text-amber-300'
+                }`}
+              >
+                {personalShoppingLeads.length}
+              </span>
+            </button>
+
+            <button
+              id="admin-tab-buyer-leads"
               onClick={() => setActiveTab('leads')}
-              className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-colors ${
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-colors ${
                 activeTab === 'leads' ? 'bg-amber-500 text-stone-950 font-bold' : 'text-stone-300 hover:bg-stone-800'
               }`}
             >
-              <Users className="w-4 h-4" />
-              <span>Buyer Leads ({leads.length})</span>
+              <div className="flex items-center gap-2.5">
+                <Users className="w-4 h-4" />
+                <span>Buyer Leads</span>
+              </div>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded font-mono font-bold ${
+                  activeTab === 'leads'
+                    ? 'bg-stone-950 text-amber-400'
+                    : 'bg-stone-800 text-stone-400'
+                }`}
+              >
+                {pureBuyerLeads.length}
+              </span>
             </button>
 
             <button
@@ -1058,40 +1156,433 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) =>
           </div>
         )}
 
-        {/* 8. LEADS TAB */}
+        {/* 8. PERSONAL SHOPPING / QUERY TAB */}
+        {activeTab === 'personal_shopping' && (
+          <div className="space-y-6">
+            {/* Header & Sub-filters */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-stone-900/60 border border-stone-800 p-5 rounded-2xl">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                    <Sparkles className="w-5 h-5" />
+                  </span>
+                  <h3 className="text-base font-bold text-white font-serif">
+                    Personal Shopping & Concierge Queries ({displayedPersonalShopping.length})
+                  </h3>
+                </div>
+                <p className="text-xs text-stone-400 mt-1">
+                  Customer requirements submitted via the "Can't find the right bag?" consultation form.
+                </p>
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1.5 bg-stone-950 p-1 rounded-xl border border-stone-800 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setPersonalShoppingSubfilter('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    personalShoppingSubfilter === 'ALL'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  All ({personalShoppingLeads.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPersonalShoppingSubfilter('BAG')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    personalShoppingSubfilter === 'BAG'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  Right Bag ({personalShoppingLeads.filter(l => l.categoryType === 'Right bag for me' || l.requirement?.includes('Right bag')).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPersonalShoppingSubfilter('WHEELS')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    personalShoppingSubfilter === 'WHEELS'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  Trolley Wheels ({personalShoppingLeads.filter(l => l.categoryType === 'Trolley wheels' || l.requirement?.includes('Trolley wheels')).length})
+                </button>
+              </div>
+            </div>
+
+            {/* Inquiries Table */}
+            {displayedPersonalShopping.length === 0 ? (
+              <div className="bg-stone-900/60 border border-stone-800 rounded-2xl p-12 text-center space-y-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-stone-800 flex items-center justify-center text-amber-400">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-sm">No Personal Shopping Queries Yet</h4>
+                  <p className="text-stone-400 text-xs mt-1 max-w-sm mx-auto">
+                    When visitors submit requests via the "Can't find the right bag?" consultation form on the homepage, they will appear here.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigate('home')}
+                  className="px-4 py-2 bg-stone-800 hover:bg-stone-700 text-amber-300 text-xs font-semibold rounded-lg transition-colors inline-flex items-center gap-2"
+                >
+                  <span>View Homepage Form</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="bg-stone-900/60 border border-stone-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-stone-900 border-b border-stone-800 text-stone-400 uppercase font-semibold">
+                      <tr>
+                        <th className="p-4">Customer</th>
+                        <th className="p-4">Contact</th>
+                        <th className="p-4">Category</th>
+                        <th className="p-4">Trip / Use Case Requirement</th>
+                        <th className="p-4">Budget</th>
+                        <th className="p-4">Date</th>
+                        <th className="p-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-800">
+                      {displayedPersonalShopping.map((l) => {
+                        const cleanPhone = (l.phone || '').replace(/[^0-9]/g, '');
+                        const waMsg = encodeURIComponent(
+                          `Hi ${l.name}, this is Mohammad Shakil from Shakil Bag Store regarding your personal shopping inquiry about ${l.categoryType || 'luggage'}. How can we assist with your upcoming journey?`
+                        );
+                        const isWheels = l.categoryType === 'Trolley wheels' || l.requirement?.includes('Trolley wheels');
+
+                        return (
+                          <tr key={l._id} className="hover:bg-stone-900/40 transition-colors">
+                            {/* Customer Name */}
+                            <td className="p-4 font-bold text-white whitespace-nowrap">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-7 h-7 rounded-full bg-[#C59B53]/20 border border-[#C59B53]/40 text-[#C59B53] flex items-center justify-center font-bold text-xs">
+                                  {l.name ? l.name.charAt(0).toUpperCase() : 'G'}
+                                </div>
+                                <span>{l.name}</span>
+                              </div>
+                            </td>
+
+                            {/* Contact Details */}
+                            <td className="p-4 whitespace-nowrap">
+                              <div className="space-y-1">
+                                {cleanPhone ? (
+                                  <a
+                                    href={`https://wa.me/${cleanPhone}?text=${waMsg}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex items-center gap-1.5 font-mono text-emerald-400 hover:text-emerald-300 font-medium"
+                                  >
+                                    <PhoneCall className="w-3 h-3" />
+                                    <span>{l.phone}</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-stone-500 font-mono">—</span>
+                                )}
+                                {l.email ? (
+                                  <a
+                                    href={`mailto:${l.email}`}
+                                    className="flex items-center gap-1.5 text-sky-400 hover:text-sky-300 text-[11px]"
+                                  >
+                                    <Mail className="w-3 h-3" />
+                                    <span>{l.email}</span>
+                                  </a>
+                                ) : null}
+                              </div>
+                            </td>
+
+                            {/* Category Pill */}
+                            <td className="p-4 whitespace-nowrap">
+                              <span
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-mono font-bold tracking-wider uppercase border ${
+                                  isWheels
+                                    ? 'bg-cyan-950/80 text-cyan-300 border-cyan-800'
+                                    : 'bg-amber-950/80 text-amber-300 border-amber-800'
+                                }`}
+                              >
+                                {l.categoryType || (isWheels ? 'Trolley wheels' : 'Right bag for me')}
+                              </span>
+                            </td>
+
+                            {/* Requirement / Trip details */}
+                            <td className="p-4 text-stone-200 max-w-sm leading-relaxed">
+                              <div className="font-sans text-xs">
+                                {l.requirement || 'Looking for expert luggage consultation'}
+                              </div>
+                            </td>
+
+                            {/* Budget */}
+                            <td className="p-4 whitespace-nowrap">
+                              {l.budget ? (
+                                <span className="px-2 py-0.5 rounded bg-stone-800 text-amber-400 font-mono text-[11px] font-semibold">
+                                  {l.budget}
+                                </span>
+                              ) : (
+                                <span className="text-stone-500 text-[11px]">Flexible</span>
+                              )}
+                            </td>
+
+                            {/* Date */}
+                            <td className="p-4 text-stone-400 whitespace-nowrap text-[11px]">
+                              {new Date(l.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric'
+                              })}
+                            </td>
+
+                            {/* Direct Actions */}
+                            <td className="p-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2">
+                                {cleanPhone && (
+                                  <a
+                                    href={`https://wa.me/${cleanPhone}?text=${waMsg}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2.5 py-1.5 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-semibold rounded-lg text-[10px] flex items-center gap-1 transition-colors"
+                                    title="Open WhatsApp Chat"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                )}
+
+                                {l.email && (
+                                  <a
+                                    href={`mailto:${l.email}?subject=Personal%20Shopping%20Inquiry%20-%20Shakil%20Bag%20Store`}
+                                    className="p-1.5 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-lg transition-colors"
+                                    title="Send Email"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLead(l._id)}
+                                  className="p-1.5 hover:bg-red-950/60 text-stone-400 hover:text-red-400 rounded-lg transition-colors"
+                                  title="Delete inquiry"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 9. BUYER LEADS TAB */}
         {activeTab === 'leads' && (
-          <div className="bg-stone-900/60 border border-stone-800 rounded-2xl overflow-hidden">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-stone-900 border-b border-stone-800 text-stone-400 uppercase font-semibold">
-                <tr>
-                  <th className="p-4">Name</th>
-                  <th className="p-4">Phone / WhatsApp</th>
-                  <th className="p-4">Requirement</th>
-                  <th className="p-4">Source</th>
-                  <th className="p-4 text-right">Direct Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-800">
-                {leads.map((l) => (
-                  <tr key={l._id} className="hover:bg-stone-900/40">
-                    <td className="p-4 font-bold text-white">{l.name}</td>
-                    <td className="p-4 font-mono text-emerald-400">{l.phone}</td>
-                    <td className="p-4 text-stone-300 max-w-xs">{l.requirement || 'General inquiry'}</td>
-                    <td className="p-4 text-amber-400">{l.source}</td>
-                    <td className="p-4 text-right">
-                      <a
-                        href={`https://wa.me/${l.phone.replace(/[^0-9]/g, '')}?text=Hi%20${encodeURIComponent(l.name)}%2C%20this%20is%20Mohammad%20Shakil%20from%20Shakil%20Bag%20Store.`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-3 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-bold rounded-lg text-[10px]"
-                      >
-                        WhatsApp Client
-                      </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-6">
+            {/* Header & Segregation Filters */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-stone-900/60 border border-stone-800 p-5 rounded-2xl">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+                    <Users className="w-5 h-5" />
+                  </span>
+                  <h3 className="text-base font-bold text-white font-serif">
+                    Buyer Leads Management ({displayedBuyerLeads.length})
+                  </h3>
+                </div>
+                <p className="text-xs text-stone-400 mt-1">
+                  High-intent luggage buyers and product inquiries. Newsletter signups are separated for clarity.
+                </p>
+              </div>
+
+              {/* Segmented Filter Pills */}
+              <div className="flex items-center gap-1.5 bg-stone-950 p-1 rounded-xl border border-stone-800 self-start sm:self-auto">
+                <button
+                  type="button"
+                  id="filter-buyer-leads-only"
+                  onClick={() => setLeadCategoryFilter('BUYER_LEADS')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    leadCategoryFilter === 'BUYER_LEADS'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  Buyer Leads ({pureBuyerLeads.length})
+                </button>
+                <button
+                  type="button"
+                  id="filter-newsletter-only"
+                  onClick={() => setLeadCategoryFilter('NEWSLETTER')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    leadCategoryFilter === 'NEWSLETTER'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  Newsletter ({newsletterLeads.length})
+                </button>
+                <button
+                  type="button"
+                  id="filter-all-leads"
+                  onClick={() => setLeadCategoryFilter('ALL')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    leadCategoryFilter === 'ALL'
+                      ? 'bg-amber-500 text-stone-950 font-bold'
+                      : 'text-stone-400 hover:text-white'
+                  }`}
+                >
+                  All Combined ({leads.length})
+                </button>
+              </div>
+            </div>
+
+            {/* Table */}
+            {displayedBuyerLeads.length === 0 ? (
+              <div className="bg-stone-900/60 border border-stone-800 rounded-2xl p-12 text-center space-y-3">
+                <Users className="w-10 h-10 mx-auto text-stone-600" />
+                <h4 className="text-white font-bold text-sm">No leads in this category</h4>
+                <p className="text-stone-400 text-xs max-w-sm mx-auto">
+                  {leadCategoryFilter === 'BUYER_LEADS'
+                    ? 'No direct buyer inquiries yet. Check the "Personal Shopping / Query" tab for consultation submissions.'
+                    : 'No records match this filter.'}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-stone-900/60 border border-stone-800 rounded-2xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-stone-900 border-b border-stone-800 text-stone-400 uppercase font-semibold">
+                      <tr>
+                        <th className="p-4">Customer Name</th>
+                        <th className="p-4">Phone / WhatsApp</th>
+                        <th className="p-4">Email</th>
+                        <th className="p-4">Requirement / Details</th>
+                        <th className="p-4">Source</th>
+                        <th className="p-4">Date</th>
+                        <th className="p-4 text-right">Direct Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-stone-800">
+                      {displayedBuyerLeads.map((l) => {
+                        const cleanPhone = (l.phone || '').replace(/[^0-9]/g, '');
+                        const isNews = isNewsletterLead(l);
+                        const isPS = isPersonalShoppingLead(l);
+
+                        return (
+                          <tr key={l._id} className="hover:bg-stone-900/40 transition-colors">
+                            {/* Customer Name */}
+                            <td className="p-4 font-bold text-white whitespace-nowrap">
+                              {l.name}
+                            </td>
+
+                            {/* Phone / WhatsApp */}
+                            <td className="p-4 font-mono whitespace-nowrap">
+                              {cleanPhone && cleanPhone.length > 5 ? (
+                                <span className="text-emerald-400 font-medium">
+                                  {l.phone}
+                                </span>
+                              ) : (
+                                <span className="text-stone-500">—</span>
+                              )}
+                            </td>
+
+                            {/* Email */}
+                            <td className="p-4 whitespace-nowrap">
+                              {l.email ? (
+                                <a
+                                  href={`mailto:${l.email}`}
+                                  className="text-sky-400 hover:text-sky-300 underline font-sans"
+                                >
+                                  {l.email}
+                                </a>
+                              ) : (
+                                <span className="text-stone-500">—</span>
+                              )}
+                            </td>
+
+                            {/* Requirement */}
+                            <td className="p-4 text-stone-300 max-w-xs leading-relaxed">
+                              {l.requirement || 'General luxury inquiry'}
+                            </td>
+
+                            {/* Source Badge */}
+                            <td className="p-4 whitespace-nowrap">
+                              <span
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                  isPS
+                                    ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                                    : isNews
+                                    ? 'bg-sky-950 text-sky-300 border border-sky-800'
+                                    : 'bg-stone-800 text-stone-300'
+                                }`}
+                              >
+                                {isPS
+                                  ? 'Personal Shopping'
+                                  : isNews
+                                  ? 'Newsletter'
+                                  : l.source || 'Lead'}
+                              </span>
+                            </td>
+
+                            {/* Date */}
+                            <td className="p-4 text-stone-400 whitespace-nowrap text-[11px]">
+                              {new Date(l.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short'
+                              })}
+                            </td>
+
+                            {/* Direct Action */}
+                            <td className="p-4 text-right whitespace-nowrap">
+                              <div className="flex items-center justify-end gap-2">
+                                {cleanPhone && cleanPhone.length > 5 ? (
+                                  <a
+                                    href={`https://wa.me/${cleanPhone}?text=Hi%20${encodeURIComponent(
+                                      l.name
+                                    )}%2C%20this%20is%20Mohammad%20Shakil%20from%20Shakil%20Bag%20Store.`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2.5 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 font-bold rounded-lg text-[10px] transition-colors"
+                                  >
+                                    WhatsApp
+                                  </a>
+                                ) : null}
+
+                                {l.email ? (
+                                  <a
+                                    href={`mailto:${l.email}`}
+                                    className="p-1.5 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-lg transition-colors"
+                                    title="Send Email"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                ) : null}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteLead(l._id)}
+                                  className="p-1.5 hover:bg-red-950/60 text-stone-400 hover:text-red-400 rounded-lg transition-colors"
+                                  title="Delete lead"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

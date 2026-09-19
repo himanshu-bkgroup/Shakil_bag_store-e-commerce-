@@ -175,6 +175,9 @@ function loadLocalDB(): DBState {
       const raw = fs.readFileSync(candidateFile, 'utf-8');
       const parsed = JSON.parse(raw);
       if (parsed && Array.isArray(parsed.products) && parsed.products.length > 0) {
+        if (!Array.isArray(parsed.leads)) parsed.leads = [];
+        if (!Array.isArray(parsed.enquiries)) parsed.enquiries = [];
+        if (!Array.isArray(parsed.exit_surveys)) parsed.exit_surveys = [];
         return parsed;
       }
     }
@@ -490,6 +493,35 @@ export const db = {
       saveLocalDB();
     }
     return lead;
+  },
+
+  async deleteLead(id: string): Promise<boolean> {
+    if (useMongoDB && mongoDb) {
+      await mongoDb.collection<any>('leads').deleteOne({ _id: id });
+    } else {
+      localDB.leads = localDB.leads.filter((l) => l._id !== id);
+      saveLocalDB();
+    }
+    return true;
+  },
+
+  async updateLead(id: string, updates: Partial<Lead>): Promise<Lead | null> {
+    if (useMongoDB && mongoDb) {
+      const res = await mongoDb.collection<any>('leads').findOneAndUpdate(
+        { _id: id },
+        { $set: updates },
+        { returnDocument: 'after' }
+      );
+      return res as any;
+    } else {
+      const idx = localDB.leads.findIndex((l) => l._id === id);
+      if (idx >= 0) {
+        localDB.leads[idx] = { ...localDB.leads[idx], ...updates };
+        saveLocalDB();
+        return localDB.leads[idx];
+      }
+      return null;
+    }
   },
 
   async getEnquiries(): Promise<Enquiry[]> {

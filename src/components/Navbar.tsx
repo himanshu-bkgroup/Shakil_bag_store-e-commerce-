@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Heart, User as UserIcon, Search, Menu, X, MessageSquare, PhoneCall, ShieldCheck, Compass } from 'lucide-react';
+import { ShoppingBag, Heart, User as UserIcon, Search, Menu, X, MessageSquare, PhoneCall, ShieldCheck, Compass, Sparkles } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 interface NavbarProps {
@@ -113,6 +113,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, onOpenC
               className="transition-colors hover:text-amber-300 text-stone-300 uppercase text-xs tracking-wider"
             >
               Wheels & Spares
+            </button>
+            <button
+              id="nav-btn-personal-shopping"
+              onClick={() => {
+                onNavigate('home');
+                setTimeout(() => {
+                  const el = document.getElementById('personal-shopping');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+              className="transition-colors text-[#C59B53] hover:text-amber-200 uppercase text-xs tracking-wider flex items-center gap-1 font-semibold"
+            >
+              <Sparkles className="w-3 h-3 text-[#C59B53]" />
+              <span>Personal Shopping</span>
             </button>
             <button
               onClick={() => onNavigate('track-order')}
@@ -274,6 +288,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage, onOpenC
               className="text-left py-2 px-3 rounded hover:bg-stone-800 text-stone-200"
             >
               Replacement Wheels & Hardware
+            </button>
+            <button
+              onClick={() => {
+                onNavigate('home');
+                setMobileMenuOpen(false);
+                setTimeout(() => {
+                  const el = document.getElementById('personal-shopping');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+              }}
+              className="text-left py-2 px-3 rounded hover:bg-stone-800 text-[#C59B53] font-semibold flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-[#C59B53]" /> Can't Find Bag? Personal Shopping
             </button>
             <button
               onClick={() => { onNavigate('track-order'); setMobileMenuOpen(false); }}

@@ -8,26 +8,28 @@ interface FooterProps {
 
 export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterPhone, setNewsletterPhone] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const { categories } = useStore();
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newsletterEmail.trim()) {
+    if (newsletterEmail.trim() || newsletterPhone.trim()) {
       try {
         await fetch('/api/leads', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: 'Newsletter Subscriber',
-            phone: 'Not provided',
+            name: 'Newsletter VIP Subscriber',
+            phone: newsletterPhone.trim() || '',
             email: newsletterEmail.trim(),
-            requirement: 'Subscribed to luxury travel drops & private sales',
-            source: 'CONTACT_FORM'
+            requirement: 'Subscribed to luxury travel drops, private sales & exclusive previews',
+            source: 'NEWSLETTER'
           })
         });
         setSubscribed(true);
         setNewsletterEmail('');
+        setNewsletterPhone('');
       } catch (err) {
         setSubscribed(true);
       }
@@ -198,8 +200,9 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               Subscribe for private archival drops, bespoke luggage releases, and direct invites from Mohammad Shakil.
             </p>
             {subscribed ? (
-              <div className="p-3 bg-amber-950/50 border border-amber-800 text-amber-200 text-xs rounded-lg">
-                Thank you. You are enrolled in Shakil Bag Store private updates.
+              <div className="p-3.5 bg-amber-950/50 border border-amber-800 text-amber-200 text-xs rounded-xl space-y-1">
+                <div className="font-bold text-amber-300">Enrollment Confirmed!</div>
+                <div className="text-stone-300 text-[11px]">Thank you. You are enrolled in Mohammad Shakil private atelier drops & updates.</div>
               </div>
             ) : (
               <form onSubmit={handleSubscribe} className="space-y-2">
@@ -211,11 +214,18 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                   placeholder="Enter your email address"
                   className="w-full bg-stone-900 border border-stone-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder-stone-500 focus:outline-none focus:border-amber-400"
                 />
+                <input
+                  type="tel"
+                  value={newsletterPhone}
+                  onChange={(e) => setNewsletterPhone(e.target.value)}
+                  placeholder="WhatsApp / Mobile (optional for drops)"
+                  className="w-full bg-stone-900 border border-stone-800 rounded-lg px-3.5 py-2 text-xs text-white placeholder-stone-500 focus:outline-none focus:border-amber-400"
+                />
                 <button
                   type="submit"
-                  className="w-full py-2 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-1"
+                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors flex items-center justify-center gap-1 cursor-pointer shadow"
                 >
-                  <span>Subscribe</span>
+                  <span>Subscribe to Private Drops</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </form>

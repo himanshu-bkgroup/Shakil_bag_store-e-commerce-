@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Sparkles, Truck, Check, ArrowRight, ChevronDown, Star, PhoneCall, Compass, Luggage } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
+import { PersonalShoppingSection } from '../components/PersonalShoppingSection';
 import { Product, Category } from '../types';
 import { useStore } from '../context/StoreContext';
 import { INITIAL_PRODUCTS } from '../data/initialData';
@@ -54,7 +55,7 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
   ];
 
   return (
-    <div className="bg-stone-950 text-stone-100 min-h-screen">
+    <div className="bg-stone-950 text-stone-100 min-h-screen overflow-x-hidden w-full max-w-full">
       {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden pt-12 pb-24 lg:pt-20 lg:pb-32 border-b border-stone-900">
         {/* Subtle Ambient Background Gradients */}
@@ -363,6 +364,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate }) => {
           ))}
         </div>
       </section>
+
+      {/* PERSONAL SHOPPING & CONSULTATION FORM */}
+      <PersonalShoppingSection onNavigate={onNavigate} />
 
       {/* 6. VERIFIED CUSTOMER REVIEWS */}
       <section className="py-16 bg-stone-900/40 border-y border-stone-900">

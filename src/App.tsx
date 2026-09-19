@@ -138,7 +138,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col selection:bg-amber-500 selection:text-stone-950">
+    <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col overflow-x-hidden w-full max-w-full selection:bg-amber-500 selection:text-stone-950">
       {/* Navigation */}
       <Navbar
         currentPage={currentPage}
